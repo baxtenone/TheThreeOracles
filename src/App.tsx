@@ -1,4 +1,5 @@
 import { type FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { CATEGORIES, MAX_QUESTION_LENGTH, PEOPLE, recentHistoryForApi, type AnswerResult, type Category, type DiscussionResult } from '../shared/contracts';
 import { MysticBubble, OracleBall } from './components/OracleBall';
 import { ApiError, askOracles, generateQuestion, verifyAccess } from './lib/api';
@@ -18,24 +19,43 @@ export default function App() {
   const [error, setError] = useState('');
   const [selectedPerson, setSelectedPerson] = useState<(typeof PEOPLE)[number] | null>(null);
   const inFlight = useRef(false);
+  const oracleButtons = useRef<Partial<Record<(typeof PEOPLE)[number], HTMLButtonElement>>>({});
+  const answerCloseButton = useRef<HTMLButtonElement>(null);
+  const lastAnswerTrigger = useRef<HTMLButtonElement | null>(null);
   const answerByPerson = useMemo(() => new Map(answers?.responses.map((item) => [item.person, item])), [answers]);
   const selectedResponse = selectedPerson ? answerByPerson.get(selectedPerson) : undefined;
 
   useEffect(() => {
     if (!selectedPerson) return;
     const closeOnOutside = (event: PointerEvent) => {
-      const target = event.target as Element;
-      if (!target.closest('[data-oracle-interactive], [data-oracle-bubble]')) setSelectedPerson(null);
+      const target = event.target;
+      if (target instanceof Element && !target.closest('[data-oracle-interactive], [data-oracle-bubble]')) closeAnswer();
     };
+    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') closeAnswer(); };
     document.addEventListener('pointerdown', closeOnOutside);
-    return () => document.removeEventListener('pointerdown', closeOnOutside);
+    document.addEventListener('keydown', closeOnEscape);
+    return () => {
+      document.removeEventListener('pointerdown', closeOnOutside);
+      document.removeEventListener('keydown', closeOnEscape);
+    };
   }, [selectedPerson]);
+
+  useEffect(() => {
+    if (!selectedResponse) return;
+    const timer = window.setTimeout(() => answerCloseButton.current?.focus(), 0);
+    return () => window.clearTimeout(timer);
+  }, [selectedResponse]);
 
   async function authenticate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!accessCode.trim() || inFlight.current) return;
     inFlight.current = true; setBusy(true); setError('');
-    try { await verifyAccess(accessCode.trim()); accessStorage.set(accessCode.trim()); setAuthenticated(true); }
+    try {
+      await verifyAccess(accessCode.trim());
+      accessStorage.set(accessCode.trim());
+      resetTransientState();
+      setAuthenticated(true);
+    }
     catch (cause) { setError(messageFor(cause)); }
     finally { inFlight.current = false; setBusy(false); }
   }
@@ -61,7 +81,18 @@ export default function App() {
     finally { inFlight.current = false; setBusy(false); }
   }
 
-  function signOut() { accessStorage.clear(); setAuthenticated(false); setAccessCode(''); setAnswers(null); setGenerated(null); setSelectedPerson(null); setError(''); }
+  function resetTransientState() { setView('ask'); setQuestion(''); setAnswers(null); setGenerated(null); setSelectedPerson(null); setError(''); }
+  function signOut() { accessStorage.clear(); resetTransientState(); setAuthenticated(false); setAccessCode(''); }
+  function closeAnswer(returnFocus = true) {
+    setSelectedPerson(null);
+    if (returnFocus) window.setTimeout(() => lastAnswerTrigger.current?.focus(), 0);
+  }
+  function showView(nextView: View) { setSelectedPerson(null); setView(nextView); setError(''); }
+  function selectPerson(person: (typeof PEOPLE)[number]) {
+    if (selectedPerson === person) return closeAnswer(false);
+    lastAnswerTrigger.current = oracleButtons.current[person] ?? null;
+    setSelectedPerson(person);
+  }
   function handleApiError(cause: unknown) { if (cause instanceof ApiError && cause.status === 401) signOut(); setError(messageFor(cause)); }
   function askGenerated() {
     if (!generated) return;
@@ -71,27 +102,26 @@ export default function App() {
 
   if (!authenticated) return <AccessGate code={accessCode} setCode={setAccessCode} submit={authenticate} busy={busy} error={error} />;
 
-  return <div className="app-shell">
+  return <><div className={`app-shell ${answers ? 'app-shell--answered' : ''} ${selectedResponse ? 'app-shell--cloud-open' : ''}`}>
     <header className="topbar">
-      <button className="brand" onClick={() => setView('ask')} aria-label="The Three Oracles home"><span className="brand__mark">◈</span><span>THE THREE ORACLES</span></button>
-      <button className="icon-button" onClick={() => setView('settings')} aria-label="Open Settings">•••</button>
+      <button className="brand" onClick={() => showView('ask')} aria-label="The Three Oracles home"><span className="brand__mark">◈</span><span>THE THREE ORACLES</span></button>
+      <button className="icon-button" onClick={() => showView('settings')} aria-label="Open Settings">•••</button>
     </header>
     <main>
       <section className="hero"><p className="eyebrow">BRUCE <span>•</span> KEVIN <span>•</span> TRAVIS</p><h1>Three perspectives.<br/><em>One question.</em></h1></section>
       <nav className="mode-switch" aria-label="Choose an Oracle mode">
-        <button className={view === 'ask' ? 'active' : ''} onClick={() => { setView('ask'); setError(''); }}>Ask the Oracles</button>
-        <button className={view === 'pose' ? 'active' : ''} onClick={() => { setView('pose'); setError(''); }}>Great Questions</button>
+        <button className={view === 'ask' ? 'active' : ''} onClick={() => showView('ask')}>Ask the Oracles</button>
+        <button className={view === 'pose' ? 'active' : ''} onClick={() => showView('pose')}>Great Questions</button>
       </nav>
 
       {view === 'ask' && <>
-        <form className="ask-panel" onSubmit={submitQuestion}>
+        <form className={`ask-panel ${answers ? 'ask-panel--answered' : ''}`} onSubmit={submitQuestion}>
           <label htmlFor="oracle-question">What do you want to know?</label>
           <textarea id="oracle-question" value={question} onChange={(event) => setQuestion(event.target.value)} maxLength={MAX_QUESTION_LENGTH} placeholder="Should humans colonize Mars?" rows={3} disabled={busy}/>
           <div className="ask-panel__footer">{MAX_QUESTION_LENGTH - question.length < 75 ? <span className="count" aria-live="polite">{MAX_QUESTION_LENGTH - question.length} left</span> : <span/>}<button className="primary-button" disabled={busy || !question.trim()}>{busy ? 'Consulting…' : 'Ask the Oracles'} <span aria-hidden="true">→</span></button></div>
         </form>
         <section className="oracle-stage" aria-busy={busy} aria-live="polite">
-          <div className="oracle-row">{PEOPLE.map((person) => <OracleBall key={person} name={person} response={answerByPerson.get(person)} loading={busy} selected={selectedPerson === person} onSelect={() => setSelectedPerson((current) => current === person ? null : person)}/>)}</div>
-          {selectedResponse && <div className={`mystic-anchor mystic-anchor--${selectedResponse.person.toLowerCase()}`}><MysticBubble response={selectedResponse} onClose={() => setSelectedPerson(null)}/></div>}
+          <div className="oracle-row">{PEOPLE.map((person) => <OracleBall key={person} name={person} response={answerByPerson.get(person)} loading={busy} selected={selectedPerson === person} buttonRef={(node) => { oracleButtons.current[person] = node ?? undefined; }} onSelect={() => selectPerson(person)}/>)}</div>
         </section>
         {answers && <GroupResult result={answers.group}/>}
       </>}
@@ -109,8 +139,8 @@ export default function App() {
       {view === 'settings' && <Settings onClear={() => { questionHistory.clear(); setError('Question history cleared.'); }} onSignOut={signOut}/>}
       {error && <div className="notice" role="alert">{error}</div>}
     </main>
-    <footer>BRASADA RANCH · V1.1</footer>
-  </div>;
+    <footer>BRASADA RANCH · V1.2</footer>
+  </div>{selectedResponse && createPortal(<div className="answer-cloud-layer" aria-live="polite"><MysticBubble ref={answerCloseButton} response={selectedResponse} onClose={closeAnswer}/></div>, document.body)}</>;
 }
 
 function AccessGate({ code, setCode, submit, busy, error }: { code: string; setCode: (value: string) => void; submit: (event: FormEvent<HTMLFormElement>) => void; busy: boolean; error: string }) {
@@ -130,7 +160,7 @@ function Settings({ onClear, onSignOut }: { onClear: () => void; onSignOut: () =
   return <section className="settings-panel"><p className="eyebrow">SETTINGS</p><h2>Keep it simple.</h2><div className="settings-list">
     <div><h3>Question History</h3><p>Recent Great Questions stay on this device to help avoid repeats.</p><button className="text-button" onClick={onClear}>Clear Question History</button></div>
     <div><h3>Private access</h3><p>Forget this device's saved access code.</p><button className="text-button text-button--danger" onClick={onSignOut}>Sign Out</button></div>
-  </div><p className="version">THE THREE ORACLES · VERSION 1.1</p></section>;
+  </div><p className="version">THE THREE ORACLES · VERSION 1.2</p></section>;
 }
 
 function messageFor(cause: unknown): string {

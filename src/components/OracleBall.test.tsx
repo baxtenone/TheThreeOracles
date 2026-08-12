@@ -21,3 +21,10 @@ it('renders normal and playful dodge content in mystic bubbles', () => {
   expect(screen.getByText(dodge.fullAnswer)).toBeVisible();
   expect(screen.getByText(/Oracle slips away/i)).toBeVisible();
 });
+
+it('uses the same centered label element for one-line and five-word labels', () => {
+  const { rerender } = render(<OracleBall name="Bruce" response={{ ...normal, ballLabel: 'NO.' }} loading={false} selected={false} onSelect={() => undefined}/>);
+  expect(screen.getByText('NO.')).toHaveClass('oracle__label');
+  rerender(<OracleBall name="Bruce" response={{ ...normal, ballLabel: 'TRAVIS IS WORKING OUT' }} loading={false} selected={false} onSelect={() => undefined}/>);
+  expect(screen.getByText('TRAVIS IS WORKING OUT')).toHaveClass('oracle__label');
+});

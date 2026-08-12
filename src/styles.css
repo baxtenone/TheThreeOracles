@@ -66,22 +66,20 @@ main { max-width: 1180px; margin: 0 auto; }
 .oracle__button:hover:not(:disabled) .oracle__shell, .oracle__button[aria-expanded="true"] .oracle__shell { transform: translateY(-5px) scale(1.015); filter: brightness(1.12); }
 .oracle__shell::after { content: ''; position: absolute; inset: 9%; border-radius: 50%; border: 1px solid rgba(255,255,255,.045); }
 .oracle__shine { position: absolute; width: 34%; height: 18%; left: 20%; top: 12%; border-radius: 50%; background: radial-gradient(ellipse, rgba(255,255,255,.2), transparent 68%); transform: rotate(-24deg); filter: blur(6px); }
-.oracle__window { position: absolute; z-index: 2; inset: 29%; display: grid; place-items: center; padding: 10%; overflow: hidden; border-radius: 50%; color: #d9fffa; background: radial-gradient(circle at 45% 38%, rgba(var(--accent-rgb),.25), rgba(7,26,31,.93) 58%, #041016); border: 1px solid rgba(var(--accent-rgb),.55); box-shadow: inset 0 0 28px rgba(var(--accent-rgb),.22), 0 0 22px rgba(var(--accent-rgb),.13); }
+.oracle__window { position: absolute; z-index: 2; inset: 22%; display: grid; place-items: center; padding: 8%; overflow: hidden; border-radius: 50%; color: #d9fffa; background: radial-gradient(circle at 45% 38%, rgba(var(--accent-rgb),.25), rgba(7,26,31,.93) 58%, #041016); border: 1px solid rgba(var(--accent-rgb),.55); box-shadow: inset 0 0 28px rgba(var(--accent-rgb),.22), 0 0 22px rgba(var(--accent-rgb),.13); }
 .oracle__window::before { content: ''; position: absolute; inset: 6%; border: 1px solid rgba(255,255,255,.09); border-radius: 50%; }
 .oracle__sigil { color: var(--accent); font-size: clamp(1.7rem, 5vw, 3rem); text-shadow: 0 0 22px var(--accent); }
-.oracle__label { position: relative; font-family: 'DM Mono', monospace; font-size: clamp(.58rem, 1.1vw, .82rem); line-height: 1.35; letter-spacing: .02em; text-transform: uppercase; }
+.oracle__label { position: relative; width: 86%; min-height: 86%; display: grid; place-items: center; text-align: center; text-wrap: balance; font-family: 'DM Mono', monospace; font-size: clamp(.62rem, 1.1vw, .84rem); line-height: 1.35; letter-spacing: .02em; text-transform: uppercase; }
 .oracle__name { display: block; margin: 21px 0 0; color: var(--accent); font-family: 'DM Mono', monospace; font-size: .72rem; letter-spacing: .25em; text-transform: uppercase; }
 .oracle__hint { display: block; min-height: 16px; margin-top: 6px; color: rgba(210,225,224,.48); font-family: 'DM Mono', monospace; font-size: .56rem; letter-spacing: .08em; text-transform: uppercase; }
 .oracle--dodge .oracle__window { border-style: dashed; }
 .oracle--thinking .oracle__shell { animation: oracleWobble 1.8s ease-in-out infinite; }
 .oracle__mist { width: 70%; height: 70%; border-radius: 50%; background: conic-gradient(from 20deg, transparent, rgba(var(--accent-rgb),.45), transparent 55%, rgba(255,255,255,.18), transparent); filter: blur(7px); animation: mist 1.3s linear infinite; }
 
-.mystic-anchor { --pointer: 16.7%; position: relative; margin: 28px auto 0; width: min(760px, 92%); }
-.mystic-anchor--kevin { --pointer: 50%; }
-.mystic-anchor--travis { --pointer: 83.3%; }
-.mystic-bubble { --bubble-accent: #75d8cd; --bubble-rgb: 117,216,205; position: relative; padding: 28px 58px 28px 30px; border: 1px solid rgba(var(--bubble-rgb),.5); border-radius: 26px 18px 28px 20px; background: radial-gradient(circle at 12% 0%, rgba(var(--bubble-rgb),.16), transparent 40%), linear-gradient(135deg, rgba(13,31,38,.94), rgba(5,14,20,.96)); box-shadow: 0 25px 70px rgba(0,0,0,.5), 0 0 38px rgba(var(--bubble-rgb),.1), inset 0 0 45px rgba(var(--bubble-rgb),.045); backdrop-filter: blur(16px); text-align: left; animation: bubbleReveal .32s ease-out both; }
-.mystic-bubble::before { content: ''; position: absolute; top: -14px; left: var(--pointer); width: 25px; height: 25px; border-top: 1px solid rgba(var(--bubble-rgb),.5); border-left: 1px solid rgba(var(--bubble-rgb),.5); background: rgba(11,27,34,.96); transform: translateX(-50%) rotate(45deg); }
-.mystic-bubble::after { content: ''; position: absolute; inset: -9px; z-index: -1; border-radius: 34px 24px 38px 29px; background: rgba(var(--bubble-rgb),.045); filter: blur(8px); }
+.answer-cloud-layer { position: fixed; z-index: 50; inset: 0; display: flex; align-items: flex-start; justify-content: center; padding: clamp(155px, 22vh, 225px) 22px 0; pointer-events: none; background: linear-gradient(180deg, rgba(1,6,10,.38), rgba(1,6,10,.18) 58%, transparent 78%); }
+.mystic-bubble { --bubble-accent: #75d8cd; --bubble-rgb: 117,216,205; position: relative; isolation: isolate; width: min(760px, calc(100vw - 44px)); max-height: min(460px, 62vh); overflow-x: hidden; overflow-y: auto; pointer-events: auto; padding: 34px 62px 31px 34px; border: 1px solid rgba(var(--bubble-rgb),.52); border-radius: 34% 48% 29% 43% / 28% 35% 41% 32%; background: radial-gradient(circle at 12% 0%, rgba(var(--bubble-rgb),.2), transparent 42%), linear-gradient(145deg, rgba(17,35,42,.98), rgba(5,13,19,.98)); box-shadow: 0 30px 90px rgba(0,0,0,.65), 0 0 54px rgba(var(--bubble-rgb),.14), inset 0 0 52px rgba(var(--bubble-rgb),.06); backdrop-filter: blur(18px); text-align: left; animation: bubbleReveal .32s ease-out both; }
+.mystic-bubble::before { content: ''; position: absolute; z-index: -1; inset: 0 0 42%; border-radius: 48% 34% 52% 39% / 62% 48% 46% 58%; background: radial-gradient(circle at 12% 58%, rgba(24,45,52,.98) 0 18%, transparent 19%), radial-gradient(circle at 32% 31%, rgba(27,48,55,.98) 0 27%, transparent 28%), radial-gradient(circle at 59% 48%, rgba(18,39,47,.98) 0 31%, transparent 32%), radial-gradient(circle at 87% 62%, rgba(14,31,39,.98) 0 23%, transparent 24%); filter: drop-shadow(0 -8px 18px rgba(0,0,0,.28)); }
+.mystic-bubble::after { content: ''; position: absolute; inset: 0; z-index: -2; border-radius: 39% 51% 33% 47% / 34% 42% 46% 31%; background: rgba(var(--bubble-rgb),.07); filter: blur(10px); }
 .mystic-bubble--gold { --bubble-accent: #d3af6b; --bubble-rgb: 211,175,107; }
 .mystic-bubble--blue { --bubble-accent: #7ea7e3; --bubble-rgb: 126,167,227; }
 .mystic-bubble--dodge { background: radial-gradient(circle at 12% 0%, rgba(var(--bubble-rgb),.2), transparent 42%), linear-gradient(135deg, rgba(21,27,31,.95), rgba(7,14,19,.97)); }
@@ -142,19 +140,21 @@ footer { padding: 70px 0 28px; color: #44555a; text-align: center; font-family: 
 @media (max-width: 700px) {
   .app-shell { padding-left: 16px; padding-right: 16px; }
   .app-shell::before { background-position: 43% 45%; }
-  .topbar { height: 62px; }.brand { font-size: .61rem; }
-  .hero { padding: 34px 0 24px; }.hero h1 { font-size: 2.55rem; }
-  .mode-switch { margin-bottom: 24px; }.mode-switch button { font-size: .62rem; letter-spacing: .04em; }
-  .ask-panel { margin-bottom: 31px; padding: 17px 16px 14px; }.ask-panel textarea { font-size: 1rem; min-height: 72px; }
+  .topbar { height: 54px; }.brand { font-size: .59rem; }.icon-button { width: 42px; height: 42px; }
+  .hero { padding: 20px 0 15px; }.hero h1 { font-size: 2.08rem; line-height: .94; }.eyebrow { margin-bottom: 9px; font-size: .58rem; }
+  .mode-switch { margin-bottom: 15px; }.mode-switch button { font-size: .61rem; letter-spacing: .035em; }
+  .ask-panel { margin-bottom: 21px; padding: 13px 15px 11px; }.ask-panel textarea { font-size: .96rem; min-height: 56px; resize: none; line-height: 1.42; }
+  .ask-panel__footer { padding-top: 9px; }
+  .app-shell--answered .hero { padding: 12px 0 10px; }.app-shell--answered .hero h1 { font-size: 1.82rem; }
+  .app-shell--answered .ask-panel { margin-bottom: 16px; padding-top: 10px; }.app-shell--answered .ask-panel textarea { height: 48px; min-height: 42px; }
   .ask-panel__footer { align-items: flex-end; }.ask-panel .primary-button { padding: 0 15px; font-size: .65rem; }
-  .oracle-row { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding: 0; }
-  .oracle__shell { width: 100%; }.oracle__window { inset: 25%; }.oracle__sigil { font-size: 1.5rem; }
-  .oracle__label { font-size: clamp(.5rem, 2.2vw, .64rem); }
-  .oracle__name { margin-top: 12px; font-size: .6rem; letter-spacing: .15em; }
-  .oracle__hint { font-size: .48rem; }
-  .mystic-anchor { width: 100%; margin-top: 23px; --pointer: 16.7%; }
-  .mystic-anchor--kevin { --pointer: 50%; }.mystic-anchor--travis { --pointer: 83.3%; }
-  .mystic-bubble { padding: 24px 48px 24px 21px; border-radius: 22px 15px 25px 17px; }
+  .oracle-row { grid-template-columns: 1fr; gap: 25px; width: min(100%, 285px); margin: 0 auto; padding: 0; }
+  .oracle__shell { width: 220px; }.oracle__window { inset: 20%; padding: 7%; }.oracle__sigil { font-size: 2.1rem; }
+  .oracle__label { font-size: .72rem; }
+  .oracle__name { margin-top: 11px; font-size: .65rem; letter-spacing: .19em; }
+  .oracle__hint { font-size: .53rem; }
+  .answer-cloud-layer { padding: calc(env(safe-area-inset-top) + 118px) 12px 0; background: linear-gradient(180deg, rgba(1,6,10,.46), rgba(1,6,10,.2) 64%, transparent 86%); }
+  .mystic-bubble { width: min(100%, 430px); max-height: min(390px, 64vh); padding: 30px 50px 27px 23px; border-radius: 29% 42% 26% 38% / 25% 31% 38% 29%; }
   .mystic-bubble__answer { font-size: .96rem; }
   .group-result { margin-top: 32px; padding: 22px; }.group-result h2 { font-size: 1.4rem; }
   .posed-card { min-height: 330px; padding: 45px 23px; }.posed-card h2 { font-size: 1.7rem; }
