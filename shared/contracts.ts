@@ -8,11 +8,18 @@ export const CATEGORIES = [
 export const MAX_QUESTION_LENGTH = 500;
 export const MAX_STORED_HISTORY = 75;
 export const MAX_SENT_HISTORY = 20;
+export const MAX_BALL_LABEL_WORDS = 5;
+
+const ballLabelSchema = z.string().trim().min(1).max(42).refine(
+  (label) => label.split(/\s+/).length <= MAX_BALL_LABEL_WORDS,
+  `Ball label must contain at most ${MAX_BALL_LABEL_WORDS} words`
+);
 
 export const oracleResponseSchema = z.object({
   person: z.enum(PEOPLE),
-  verdict: z.string().trim().min(1).max(100),
-  explanation: z.string().trim().min(1).max(450),
+  mode: z.enum(['answer', 'dodge']),
+  ballLabel: ballLabelSchema,
+  fullAnswer: z.string().trim().min(1).max(500),
   expandedReasoning: z.string().trim().min(1).max(700).nullable()
 });
 
@@ -23,13 +30,21 @@ export const answerResultSchema = z.object({
     alignment: z.enum(['unanimous', 'mostly-agreed', 'split', 'no-consensus']),
     summary: z.string().trim().min(1).max(500),
     mainDisagreement: z.string().trim().max(400).nullable(),
-    conversationStarter: z.string().trim().max(400).nullable()
+    conversationStarter: z.string().trim().max(400).nullable(),
+    dodgePerson: z.enum(PEOPLE).nullable()
   })
 }).superRefine((value, ctx) => {
   for (const person of PEOPLE) {
     if (value.responses.filter((response) => response.person === person).length !== 1) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: `Exactly one ${person} response is required`, path: ['responses'] });
     }
+  }
+  const dodges = value.responses.filter((response) => response.mode === 'dodge');
+  if (dodges.length > 1) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'At most one Oracle may dodge', path: ['responses'] });
+  }
+  if ((dodges[0]?.person ?? null) !== value.group.dodgePerson) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Group dodgePerson must match the dodge response', path: ['group', 'dodgePerson'] });
   }
 });
 

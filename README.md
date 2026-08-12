@@ -1,6 +1,6 @@
 # The Three Oracles
 
-A private, phone-first conversational toy for Bruce, Kevin, and Travis. Ask one question and receive three short, personality-grounded takes plus a group reading—or have the app pose a genuinely interesting question for the table.
+A private, phone-first conversational toy for Bruce, Kevin, and Travis. Ask one question and receive three short, personality-grounded takes plus a group reading—or use Great Questions to put a genuinely interesting question on the table.
 
 ## Architecture
 
@@ -8,6 +8,7 @@ A private, phone-first conversational toy for Bruce, Kevin, and Travis. Ask one 
 - Vercel functions in `api/`; no database, analytics, accounts, or server-side persistence
 - Official OpenAI JavaScript SDK with the Responses API and Zod Structured Outputs
 - Shared typed request/response contracts and an installable PWA shell
+- Original project-local Central Oregon dusk and storm illustrations in `public/scenery/`
 
 `api/oracle.ts` supports `answer_question` (one request produces all three answers) and `generate_discussion_question` (one request produces one prompt). `api/auth.ts` checks private access. The browser never receives the OpenAI key or authoritative configured access code.
 
@@ -44,6 +45,8 @@ The server checks the shared code on every AI call. The browser remembers the en
 `localStorage` contains only access state, selected category, and at most 75 generated questions. Only the latest 20 questions go to the AI for repeat avoidance. Settings clears history or forgets access. The server stores nothing.
 
 Costs stay small through one bounded request per action, a cost-sensitive configurable model, short schemas, output caps, limited history, and duplicate-request locks.
+
+Ask runs use a controlled `DODGE_PROBABILITY` of 0.25. Server logic chooses either all substantive answers or exactly one playful dodge before the single model request; the resulting structured response is verified against that plan.
 
 ## Quality commands
 

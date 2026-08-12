@@ -8,9 +8,10 @@ import {
   type DiscussionResult
 } from '../../shared/contracts.js';
 import { answerInstructions, discussionInput, discussionInstructions } from './prompts.js';
+import { assertDodgePlan, type DodgePlan } from './dodge.js';
 
 export interface OracleGenerator {
-  answer(question: string): Promise<AnswerResult>;
+  answer(question: string, dodgePlan: DodgePlan): Promise<AnswerResult>;
   discuss(category: Category, recentQuestions: string[]): Promise<DiscussionResult>;
 }
 
@@ -24,16 +25,17 @@ export class OpenAIOracleGenerator implements OracleGenerator {
     this.model = model;
   }
 
-  async answer(question: string): Promise<AnswerResult> {
+  async answer(question: string, dodgePlan: DodgePlan): Promise<AnswerResult> {
     const response = await this.client.responses.parse({
       model: this.model,
-      instructions: answerInstructions,
+      instructions: answerInstructions(dodgePlan),
       input: `Question: ${question}`,
+      store: false,
       max_output_tokens: 1400,
       text: { format: zodTextFormat(answerResultSchema, 'oracle_answers') }
     });
     if (!response.output_parsed) throw new Error('The model returned no structured answer');
-    return answerResultSchema.parse(response.output_parsed);
+    return assertDodgePlan(answerResultSchema.parse(response.output_parsed), dodgePlan);
   }
 
   async discuss(category: Category, recentQuestions: string[]): Promise<DiscussionResult> {
@@ -41,6 +43,7 @@ export class OpenAIOracleGenerator implements OracleGenerator {
       model: this.model,
       instructions: discussionInstructions,
       input: discussionInput(category, recentQuestions),
+      store: false,
       max_output_tokens: 450,
       text: { format: zodTextFormat(discussionResultSchema, 'discussion_question') }
     });

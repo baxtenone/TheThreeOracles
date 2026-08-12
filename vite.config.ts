@@ -7,7 +7,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['oracle-mark.svg'],
+      includeAssets: ['oracle-mark.svg', 'scenery/*.webp'],
       manifest: {
         name: 'The Three Oracles',
         short_name: 'Oracles',
@@ -16,11 +16,7 @@ export default defineConfig({
         background_color: '#071019',
         display: 'standalone',
         start_url: '/',
-        icons: [
-          { src: '/pwa-192.png', sizes: '192x192', type: 'image/png' },
-          { src: '/pwa-512.png', sizes: '512x512', type: 'image/png' },
-          { src: '/pwa-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
-        ]
+        icons: [{ src: '/oracle-mark.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any maskable' }]
       },
       workbox: {
         navigateFallbackDenylist: [/^\/api\//],

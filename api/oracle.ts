@@ -3,11 +3,12 @@ import { ZodError } from 'zod';
 import { oracleApiRequestSchema } from '../shared/contracts.js';
 import { accessCodeFromHeaders, isAuthorized } from './_lib/auth.js';
 import { OpenAIOracleGenerator, type OracleGenerator } from './_lib/oracleService.js';
+import { chooseDodgePlan } from './_lib/dodge.js';
 
-export async function processOracleRequest(body: unknown, generator: OracleGenerator) {
+export async function processOracleRequest(body: unknown, generator: OracleGenerator, random: () => number = Math.random) {
   const request = oracleApiRequestSchema.parse(body);
   return request.mode === 'answer_question'
-    ? generator.answer(request.question)
+    ? generator.answer(request.question, chooseDodgePlan(random))
     : generator.discuss(request.category, request.recentQuestions);
 }
 
