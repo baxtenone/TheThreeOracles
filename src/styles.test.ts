@@ -21,12 +21,21 @@ it('makes narrow categories intentionally scrollable with a continuation cue', (
   expect(css).toContain('min-height: 44px');
 });
 
-it('uses a vertical phone Oracle stack while preserving the desktop three-across layout', () => {
+it('uses a compact top and two-below Oracle triangle on phone and desktop', () => {
   const css = readFileSync(`${process.cwd()}/src/styles.css`, 'utf8');
   const phone = css.slice(css.indexOf('@media (max-width: 700px)'), css.indexOf('@media (prefers-reduced-motion: reduce)'));
-  expect(css).toMatch(/\.oracle-row\s*\{[^}]*grid-template-columns:\s*repeat\(3,\s*1fr\)/);
-  expect(phone).toMatch(/\.oracle-row\s*\{[^}]*grid-template-columns:\s*1fr/);
-  expect(phone).toMatch(/\.oracle__shell\s*\{[^}]*width:\s*220px/);
+  expect(css).toMatch(/\.oracle-triangle\s*\{[^}]*grid-template-columns:\s*1fr\s+1fr/);
+  expect(css).toMatch(/\.oracle-triangle__slot--top\s*\{[^}]*grid-column:\s*1\s*\/\s*-1/);
+  expect(phone).toMatch(/\.oracle-triangle__slot--top \.oracle__shell\s*\{[^}]*width:\s*158px/);
+  expect(phone).toMatch(/\.oracle-triangle__slot--left \.oracle__shell[^}]*width:\s*148px/);
+});
+
+it('renders real lightning behind signed-in content and disables it for reduced motion', () => {
+  const css = readFileSync(`${process.cwd()}/src/styles.css`, 'utf8');
+  const reduced = css.slice(css.indexOf('@media (prefers-reduced-motion: reduce)'));
+  expect(css).toMatch(/\.lightning-layer\s*\{[^}]*position:\s*fixed[^}]*z-index:\s*-2/);
+  expect(css).toContain('@keyframes lightningSequence');
+  expect(reduced).toMatch(/\.lightning-layer\s*\{[^}]*visibility:\s*hidden/);
 });
 
 it('enlarges the answer aperture and geometrically centers short and wrapped labels', () => {

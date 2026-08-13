@@ -28,3 +28,10 @@ it('uses the same centered label element for one-line and five-word labels', () 
   rerender(<OracleBall name="Bruce" response={{ ...normal, ballLabel: 'TRAVIS IS WORKING OUT' }} loading={false} selected={false} onSelect={() => undefined}/>);
   expect(screen.getByText('TRAVIS IS WORKING OUT')).toHaveClass('oracle__label');
 });
+
+it('allows a non-interactive cloud tap to dismiss after reading', async () => {
+  const onCloudTap = vi.fn();
+  render(<MysticBubble response={normal} onClose={() => undefined} onCloudTap={onCloudTap}/>);
+  await userEvent.click(screen.getByText(normal.fullAnswer));
+  expect(onCloudTap).toHaveBeenCalledOnce();
+});

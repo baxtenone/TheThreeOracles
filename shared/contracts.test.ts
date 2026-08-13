@@ -43,4 +43,8 @@ describe('request and response contracts', () => {
     expect(recentHistoryForApi(history)).toHaveLength(MAX_SENT_HISTORY);
     expect(recentHistoryForApi(history).at(-1)).toBe('Question 99?');
   });
+  it('bounds compact Results summary copy', () => {
+    expect(() => answerResultSchema.parse({ ...validAnswer, group: { ...validAnswer.group, summary: 'x'.repeat(281) } })).toThrow();
+    expect(() => answerResultSchema.parse({ ...validAnswer, group: { ...validAnswer.group, conversationStarter: 'x'.repeat(181) } })).toThrow();
+  });
 });

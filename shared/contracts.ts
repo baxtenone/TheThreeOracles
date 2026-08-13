@@ -28,9 +28,9 @@ export const answerResultSchema = z.object({
   responses: z.array(oracleResponseSchema).length(3),
   group: z.object({
     alignment: z.enum(['unanimous', 'mostly-agreed', 'split', 'no-consensus']),
-    summary: z.string().trim().min(1).max(500),
+    summary: z.string().trim().min(1).max(280),
     mainDisagreement: z.string().trim().max(400).nullable(),
-    conversationStarter: z.string().trim().max(400).nullable(),
+    conversationStarter: z.string().trim().max(180).nullable(),
     dodgePerson: z.enum(PEOPLE).nullable()
   })
 }).superRefine((value, ctx) => {

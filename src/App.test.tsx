@@ -33,9 +33,11 @@ it('uses Great Questions terminology and hides the default character count', () 
   expect(screen.getByRole('button', { name: 'Great Questions' })).toBeVisible();
   expect(screen.queryByText('Pose a Question')).not.toBeInTheDocument();
   expect(screen.queryByText('500')).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /Bruce Oracle/ })).not.toBeInTheDocument();
+  expect(document.querySelector('.lightning-layer')).toBeInTheDocument();
 });
 
-it('generates a Great Question and hands it directly to Ask the Oracles', async () => {
+it('generates a Great Question and sends it to the dedicated Results screen', async () => {
   const user = userEvent.setup();
   render(<App/>);
   await user.click(screen.getByRole('button', { name: 'Great Questions' }));
@@ -43,7 +45,10 @@ it('generates a Great Question and hands it directly to Ask the Oracles', async 
   const generated = await screen.findByText(/Which supposedly simple problem/);
   expect(generated).toBeVisible();
   await user.click(screen.getAllByRole('button', { name: /Ask the Oracles/ }).at(-1)!);
-  expect(screen.getByLabelText('What do you want to know?')).toHaveValue('Which supposedly simple problem should humanity have solved by now?');
+  expect(await screen.findByRole('button', { name: 'Back' })).toBeVisible();
+  expect(screen.queryByLabelText('What do you want to know?')).not.toBeInTheDocument();
+  await user.click(screen.getByRole('button', { name: 'Show question' }));
+  expect(screen.getByRole('dialog', { name: 'YOU ASKED' })).toHaveTextContent('Which supposedly simple problem should humanity have solved by now?');
 });
 
 it('renders the one-dodge group summary and opens its intentional answer bubble', async () => {
@@ -52,6 +57,8 @@ it('renders the one-dodge group summary and opens its intentional answer bubble'
   await user.type(screen.getByLabelText('What do you want to know?'), 'Could this work?');
   await user.click(screen.getAllByRole('button', { name: /^Ask the Oracles/ }).at(-1)!);
   await waitFor(() => expect(screen.getByText('Two Answers. One Escape Artist.')).toBeVisible());
+  expect(screen.getByText('THE ORACLES SAY')).toBeVisible();
+  expect(screen.queryByText('THE TABLE SAYS')).not.toBeInTheDocument();
   await user.click(screen.getByRole('button', { name: /Open Kevin/ }));
   expect(screen.getByRole('dialog', { name: /Kevin/ })).toBeVisible();
   expect(screen.getByText('Kevin wants another source.')).toBeVisible();
@@ -72,7 +79,7 @@ it('opens one answer cloud, switches Oracles, closes outside, and supports keybo
   expect(screen.getAllByRole('dialog')).toHaveLength(1);
   expect(screen.getByRole('dialog', { name: /Kevin/ })).toHaveTextContent('Kevin wants another source.');
 
-  fireEvent.pointerDown(screen.getByRole('heading', { name: /Three perspectives/ }));
+  fireEvent.pointerDown(screen.getByText('THE ORACLES SAY'));
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   await waitFor(() => expect(kevin).toHaveFocus());
 });
@@ -101,6 +108,7 @@ it('resets Settings and open-answer state across sign-out/sign-in without erasin
   await user.click(await screen.findByRole('button', { name: /Open Travis/ }));
   expect(screen.getByRole('dialog', { name: /Travis/ })).toBeVisible();
 
+  await user.click(screen.getByRole('button', { name: 'Back' }));
   await user.click(screen.getByRole('button', { name: 'Open Settings' }));
   await user.click(screen.getByRole('button', { name: 'Sign Out' }));
   expect(screen.getByRole('heading', { name: /The Three Oracles/ })).toBeVisible();
@@ -123,4 +131,90 @@ it('keeps Settings user-focused and does not expose profile implementation', asy
   expect(screen.getByRole('button', { name: 'Sign Out' })).toBeVisible();
   expect(screen.queryByText(/profiles/i)).not.toBeInTheDocument();
   expect(screen.queryByText(/oracleProfiles\.ts/i)).not.toBeInTheDocument();
+});
+
+it('transitions immediately to loading Results without permanently rendering the question', async () => {
+  let resolveAnswer!: (value: AnswerResult) => void;
+  vi.mocked(askOracles).mockReturnValueOnce(new Promise((resolve) => { resolveAnswer = resolve; }));
+  const user = userEvent.setup();
+  render(<App/>);
+  const submitted = 'Will this fit on one screen?';
+  await user.type(screen.getByLabelText('What do you want to know?'), submitted);
+  await user.click(screen.getAllByRole('button', { name: /^Ask the Oracles/ }).at(-1)!);
+
+  expect(screen.getByRole('button', { name: 'Back' })).toBeVisible();
+  expect(screen.getByRole('button', { name: 'Show question' })).toBeVisible();
+  expect(screen.queryByText(submitted)).not.toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Bruce Oracle' })).toBeDisabled();
+  expect(document.querySelectorAll('.oracle--thinking')).toHaveLength(3);
+
+  resolveAnswer(answerResult);
+  expect(await screen.findByRole('button', { name: /Open Bruce/ })).toBeEnabled();
+});
+
+it('shows, toggles, and dismisses the submitted question while restoring focus', async () => {
+  const user = userEvent.setup();
+  render(<App/>);
+  await user.type(screen.getByLabelText('What do you want to know?'), 'Could this work?');
+  await user.click(screen.getAllByRole('button', { name: /^Ask the Oracles/ }).at(-1)!);
+  const questionControl = screen.getByRole('button', { name: 'Show question' });
+  await user.click(questionControl);
+  const close = screen.getByRole('button', { name: 'Close question' });
+  expect(screen.getByRole('dialog', { name: 'YOU ASKED' })).toHaveTextContent('Could this work?');
+  await waitFor(() => expect(close).toHaveFocus());
+  await user.click(close);
+  expect(screen.queryByRole('dialog', { name: 'YOU ASKED' })).not.toBeInTheDocument();
+  await waitFor(() => expect(questionControl).toHaveFocus());
+
+  await user.click(questionControl);
+  await user.click(screen.getByRole('button', { name: 'Hide question' }));
+  expect(screen.queryByRole('dialog', { name: 'YOU ASKED' })).not.toBeInTheDocument();
+});
+
+it('keeps the question popup and answer cloud mutually exclusive', async () => {
+  const user = userEvent.setup();
+  render(<App/>);
+  await user.type(screen.getByLabelText('What do you want to know?'), 'Could this work?');
+  await user.click(screen.getAllByRole('button', { name: /^Ask the Oracles/ }).at(-1)!);
+  const bruce = await screen.findByRole('button', { name: /Open Bruce/ });
+  await user.click(screen.getByRole('button', { name: 'Show question' }));
+  fireEvent.click(bruce);
+  expect(screen.queryByRole('dialog', { name: 'YOU ASKED' })).not.toBeInTheDocument();
+  expect(screen.getByRole('dialog', { name: /Bruce/ })).toBeVisible();
+
+  await user.click(screen.getByRole('button', { name: 'Show question' }));
+  expect(screen.queryByRole('dialog', { name: /Bruce/ })).not.toBeInTheDocument();
+  expect(screen.getByRole('dialog', { name: 'YOU ASKED' })).toBeVisible();
+});
+
+it('Back returns to Ask with the submitted question preserved', async () => {
+  const user = userEvent.setup();
+  render(<App/>);
+  await user.type(screen.getByLabelText('What do you want to know?'), 'Could this work?');
+  await user.click(screen.getAllByRole('button', { name: /^Ask the Oracles/ }).at(-1)!);
+  await user.click(screen.getByRole('button', { name: 'Back' }));
+  expect(screen.getByLabelText('What do you want to know?')).toHaveValue('Could this work?');
+  expect(screen.queryByRole('button', { name: /Open Bruce/ })).not.toBeInTheDocument();
+});
+
+it('creates one deterministic Oracle permutation per Ask and keeps it stable in Results', async () => {
+  const random = vi.fn().mockReturnValueOnce(.9).mockReturnValueOnce(.1).mockReturnValueOnce(.2).mockReturnValueOnce(.8);
+  const user = userEvent.setup();
+  render(<App random={random}/>);
+  await user.type(screen.getByLabelText('What do you want to know?'), 'Could this work?');
+  await user.click(screen.getAllByRole('button', { name: /^Ask the Oracles/ }).at(-1)!);
+  const bruce = await screen.findByRole('button', { name: /Open Bruce/ });
+  const initialPosition = bruce.closest('[data-position]')?.getAttribute('data-position');
+  expect(random).toHaveBeenCalledTimes(2);
+  await user.click(bruce);
+  await user.click(screen.getByRole('button', { name: 'Close Oracle answer' }));
+  await user.click(screen.getByRole('button', { name: 'Show question' }));
+  await user.click(screen.getByRole('button', { name: 'Close question' }));
+  expect(bruce.closest('[data-position]')).toHaveAttribute('data-position', initialPosition);
+  expect(random).toHaveBeenCalledTimes(2);
+
+  await user.click(screen.getByRole('button', { name: 'Back' }));
+  await user.click(screen.getAllByRole('button', { name: /^Ask the Oracles/ }).at(-1)!);
+  expect(await screen.findByRole('button', { name: /Open Bruce/ })).toBeVisible();
+  expect(random).toHaveBeenCalledTimes(4);
 });
