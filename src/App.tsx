@@ -23,6 +23,7 @@ export default function App({ random = Math.random, lightningRandom = Math.rando
   const [oracleOrder, setOracleOrder] = useState<OraclePerson[]>(() => [...PEOPLE]);
   const [questionOpen, setQuestionOpen] = useState(false);
   const inFlight = useRef(false);
+  const askRun = useRef(0);
   const oracleButtons = useRef<Partial<Record<(typeof PEOPLE)[number], HTMLButtonElement>>>({});
   const answerCloseButton = useRef<HTMLButtonElement>(null);
   const lastAnswerTrigger = useRef<HTMLButtonElement | null>(null);
@@ -87,10 +88,17 @@ export default function App({ random = Math.random, lightningRandom = Math.rando
 
   async function startAsk(clean: string) {
     if (inFlight.current) return;
+    const run = ++askRun.current;
     inFlight.current = true;
     setQuestion(clean); setOracleOrder(shuffleOracles(random)); setView('results'); setBusy(true); setError(''); setAnswers(null); setSelectedPerson(null); setQuestionOpen(false);
-    try { setAnswers(await askOracles(clean, accessCode)); } catch (cause) { handleApiError(cause); }
-    finally { inFlight.current = false; setBusy(false); }
+    try {
+      const result = await askOracles(clean, accessCode);
+      if (askRun.current === run) setAnswers(result);
+    } catch (cause) {
+      if (askRun.current === run) handleApiError(cause);
+    } finally {
+      if (askRun.current === run) { inFlight.current = false; setBusy(false); }
+    }
   }
 
   async function poseQuestion() {
@@ -103,7 +111,7 @@ export default function App({ random = Math.random, lightningRandom = Math.rando
     finally { inFlight.current = false; setBusy(false); }
   }
 
-  function resetTransientState() { setView('ask'); setQuestion(''); setAnswers(null); setGenerated(null); setSelectedPerson(null); setQuestionOpen(false); setOracleOrder([...PEOPLE]); setError(''); }
+  function resetTransientState() { askRun.current += 1; inFlight.current = false; setBusy(false); setView('ask'); setQuestion(''); setAnswers(null); setGenerated(null); setSelectedPerson(null); setQuestionOpen(false); setOracleOrder([...PEOPLE]); setError(''); }
   function signOut() { accessStorage.clear(); resetTransientState(); setAuthenticated(false); setAccessCode(''); }
   function closeAnswer(returnFocus = true) {
     setSelectedPerson(null);
@@ -118,7 +126,7 @@ export default function App({ random = Math.random, lightningRandom = Math.rando
     closeAnswer(false); setQuestionOpen(true);
   }
   function showView(nextView: View) { setSelectedPerson(null); setQuestionOpen(false); setView(nextView); setError(''); }
-  function backToAsk() { setSelectedPerson(null); setQuestionOpen(false); setAnswers(null); setOracleOrder([...PEOPLE]); setView('ask'); setError(''); }
+  function backToAsk() { askRun.current += 1; inFlight.current = false; setBusy(false); setQuestion(''); setSelectedPerson(null); setQuestionOpen(false); setAnswers(null); setOracleOrder([...PEOPLE]); setView('ask'); setError(''); }
   function selectPerson(person: (typeof PEOPLE)[number]) {
     if (selectedPerson === person) return closeAnswer(false);
     setQuestionOpen(false);
@@ -149,7 +157,7 @@ export default function App({ random = Math.random, lightningRandom = Math.rando
       {view === 'ask' && <>
         <form className="ask-panel" onSubmit={submitQuestion}>
           <label htmlFor="oracle-question">What do you want to know?</label>
-          <textarea id="oracle-question" value={question} onChange={(event) => setQuestion(event.target.value)} maxLength={MAX_QUESTION_LENGTH} placeholder="Should humans colonize Mars?" rows={3} disabled={busy}/>
+          <textarea id="oracle-question" value={question} onChange={(event) => setQuestion(event.target.value)} maxLength={MAX_QUESTION_LENGTH} placeholder="Type your question here…" rows={3} disabled={busy}/>
           <div className="ask-panel__footer">{MAX_QUESTION_LENGTH - question.length < 75 ? <span className="count" aria-live="polite">{MAX_QUESTION_LENGTH - question.length} left</span> : <span/>}<button className="primary-button" disabled={busy || !question.trim()}>{busy ? 'Consulting…' : 'Ask the Oracles'} <span aria-hidden="true">→</span></button></div>
         </form>
       </>}
@@ -171,8 +179,8 @@ export default function App({ random = Math.random, lightningRandom = Math.rando
       {view === 'pose' && <section className="pose-panel">
         <div className="category-strip" aria-label="Question category">{CATEGORIES.map((item) => <button key={item} className={category === item ? 'active' : ''} onClick={() => { setCategory(item); categoryStorage.set(item); }}>{item}</button>)}</div>
         <div className={`posed-card ${busy ? 'posed-card--thinking' : ''}`} aria-busy={busy} aria-live="polite">
-          <span className="posed-card__label">A QUESTION FOR THE TABLE</span>
-          {busy ? <h2>The room is thinking…</h2> : generated ? <><h2>{generated.question}</h2>{generated.optionalContext && <p>{generated.optionalContext}</p>}</> : <h2>Let the Oracles put something interesting on the table.</h2>}
+          <span className="posed-card__label">A QUESTION FOR THE ORACLES</span>
+          {busy ? <h2>The room is thinking…</h2> : generated ? <><h2>{generated.question}</h2>{generated.optionalContext && <p>{generated.optionalContext}</p>}</> : <h2>Let the Oracles summon something interesting.</h2>}
           <span className="posed-card__ornament" aria-hidden="true">◌</span>
         </div>
         <div className="pose-actions"><button className="primary-button" onClick={poseQuestion} disabled={busy}>{generated ? 'Another Question' : 'Find a Great Question'} <span>↻</span></button>{generated && <button className="secondary-button" onClick={askGenerated}>Ask the Oracles <span>→</span></button>}</div>

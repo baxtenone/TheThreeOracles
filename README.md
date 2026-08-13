@@ -1,6 +1,6 @@
 # The Three Oracles
 
-A private, phone-first conversational toy for Bruce, Kevin, and Travis. Ask one question and receive three short, personality-grounded takes plus a group reading—or use Great Questions to put a genuinely interesting question on the table.
+A private, phone-first conversational toy for Bruce, Kevin, and Travis. Ask one question and receive three short, personality-grounded takes plus a group reading—or use Great Questions to bring a genuinely interesting question before the Oracles.
 
 ## Architecture
 

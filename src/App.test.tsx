@@ -37,10 +37,27 @@ it('uses Great Questions terminology and hides the default character count', () 
   expect(document.querySelector('.lightning-layer')).toBeInTheDocument();
 });
 
+it('uses an instructional empty placeholder and enables Ask only for meaningful text', async () => {
+  const user = userEvent.setup();
+  render(<App/>);
+  const field = screen.getByLabelText('What do you want to know?');
+  const ask = screen.getAllByRole('button', { name: /^Ask the Oracles/ }).at(-1)!;
+  expect(field).toHaveAttribute('placeholder', 'Type your question here…');
+  expect(field.getAttribute('placeholder')).not.toMatch(/Mars/i);
+  expect(field).toHaveValue('');
+  expect(ask).toBeDisabled();
+  await user.type(field, '   ');
+  expect(ask).toBeDisabled();
+  await user.type(field, 'A real question?');
+  expect(ask).toBeEnabled();
+});
+
 it('generates a Great Question and sends it to the dedicated Results screen', async () => {
   const user = userEvent.setup();
   render(<App/>);
   await user.click(screen.getByRole('button', { name: 'Great Questions' }));
+  expect(screen.getByText('A QUESTION FOR THE ORACLES')).toBeVisible();
+  expect(screen.queryByText('A QUESTION FOR THE TABLE')).not.toBeInTheDocument();
   await user.click(screen.getByRole('button', { name: /Find a Great Question/ }));
   const generated = await screen.findByText(/Which supposedly simple problem/);
   expect(generated).toBeVisible();
@@ -49,6 +66,10 @@ it('generates a Great Question and sends it to the dedicated Results screen', as
   expect(screen.queryByLabelText('What do you want to know?')).not.toBeInTheDocument();
   await user.click(screen.getByRole('button', { name: 'Show question' }));
   expect(screen.getByRole('dialog', { name: 'YOU ASKED' })).toHaveTextContent('Which supposedly simple problem should humanity have solved by now?');
+  await user.click(screen.getByRole('button', { name: 'Close question' }));
+  await user.click(screen.getByRole('button', { name: 'Back' }));
+  expect(screen.getByLabelText('What do you want to know?')).toHaveValue('');
+  expect(JSON.parse(localStorage.getItem('three-oracles:question-history') ?? '[]')).toContain('Which supposedly simple problem should humanity have solved by now?');
 });
 
 it('renders the one-dodge group summary and opens its intentional answer bubble', async () => {
@@ -187,14 +208,37 @@ it('keeps the question popup and answer cloud mutually exclusive', async () => {
   expect(screen.getByRole('dialog', { name: 'YOU ASKED' })).toBeVisible();
 });
 
-it('Back returns to Ask with the submitted question preserved', async () => {
+it('Back starts a clean Ask round and clears transient result state without clearing history', async () => {
   const user = userEvent.setup();
+  const history = ['Why do socks disappear?'];
+  localStorage.setItem('three-oracles:question-history', JSON.stringify(history));
   render(<App/>);
   await user.type(screen.getByLabelText('What do you want to know?'), 'Could this work?');
   await user.click(screen.getAllByRole('button', { name: /^Ask the Oracles/ }).at(-1)!);
+  expect(await screen.findByText('THE ORACLES SAY')).toBeVisible();
   await user.click(screen.getByRole('button', { name: 'Back' }));
-  expect(screen.getByLabelText('What do you want to know?')).toHaveValue('Could this work?');
+  const field = screen.getByLabelText('What do you want to know?');
+  expect(field).toHaveValue('');
+  expect(field).toHaveAttribute('placeholder', 'Type your question here…');
+  expect(screen.getAllByRole('button', { name: /^Ask the Oracles/ }).at(-1)).toBeDisabled();
   expect(screen.queryByRole('button', { name: /Open Bruce/ })).not.toBeInTheDocument();
+  expect(screen.queryByText('THE ORACLES SAY')).not.toBeInTheDocument();
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  expect(localStorage.getItem('three-oracles:question-history')).toBe(JSON.stringify(history));
+});
+
+it('Back invalidates a pending result and leaves the new Ask round usable', async () => {
+  let resolveAnswer!: (value: AnswerResult) => void;
+  vi.mocked(askOracles).mockReturnValueOnce(new Promise((resolve) => { resolveAnswer = resolve; }));
+  const user = userEvent.setup();
+  render(<App/>);
+  await user.type(screen.getByLabelText('What do you want to know?'), 'Old round?');
+  await user.click(screen.getAllByRole('button', { name: /^Ask the Oracles/ }).at(-1)!);
+  await user.click(screen.getByRole('button', { name: 'Back' }));
+  await user.type(screen.getByLabelText('What do you want to know?'), 'New round?');
+  expect(screen.getAllByRole('button', { name: /^Ask the Oracles/ }).at(-1)).toBeEnabled();
+  resolveAnswer(answerResult);
+  await waitFor(() => expect(screen.queryByText('THE ORACLES SAY')).not.toBeInTheDocument());
 });
 
 it('creates one deterministic Oracle permutation per Ask and keeps it stable in Results', async () => {
@@ -214,6 +258,7 @@ it('creates one deterministic Oracle permutation per Ask and keeps it stable in 
   expect(random).toHaveBeenCalledTimes(2);
 
   await user.click(screen.getByRole('button', { name: 'Back' }));
+  await user.type(screen.getByLabelText('What do you want to know?'), 'Another round?');
   await user.click(screen.getAllByRole('button', { name: /^Ask the Oracles/ }).at(-1)!);
   expect(await screen.findByRole('button', { name: /Open Bruce/ })).toBeVisible();
   expect(random).toHaveBeenCalledTimes(4);
